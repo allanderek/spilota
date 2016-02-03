@@ -43,7 +43,7 @@ class Application(object):
             try:
                 response = requests.get("http://localhost:5000/")
                 break
-            except:
+            except:  # pragma: no cover
                 time.sleep(0.1)
         else:  # pragma: no cover
             print("Server does not seem to have been started!")
