@@ -6,8 +6,16 @@ class Spilota(object):
         self.response = requests.get(url)
         self.soup = bs4.BeautifulSoup(self.response.text, 'html.parser')
 
+    def get_element(self, css_selector):
+        return getattr(self.soup, css_selector)
+
     def exists(self, css_selector):
-        return bool(getattr(self.soup, css_selector))
+        return bool(self.get_element(css_selector))
+
+    def click(self, css_selector):
+        element = self.get_element(css_selector)
+        url = element['href']
+        self.get(url)
 
 # Testing.
 
@@ -68,7 +76,27 @@ class TestHelloWorld(Application):
         return "<h1>Hello World!</h1>"
 
     def test_application(self, driver):
+        driver.get('http://localhost:5000')
+        assert driver.exists('h1')
+        assert not driver.exists('h2')
+
+class TestClick(Application):
+    application = flask.Flask('TestClick')
+
+    @application.route("/")
+    def hello():
+        return """<h1>Hello World!</h1>
+                  <a href="http://localhost:5000/goodbye">say goodbye</a>"""
+
+    @application.route("/goodbye")
+    def goodbye():
+        return "<h2>Goodbye World!</h2>"
+
+    def test_application(self, driver):
         # So this is essentially the actual test.
         driver.get('http://localhost:5000')
         assert driver.exists('h1')
         assert not driver.exists('h2')
+        driver.click('a')
+        assert driver.exists('h2')
+        assert not driver.exists('h1')
