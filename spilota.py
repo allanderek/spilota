@@ -45,9 +45,9 @@ class Application(object):
                 break
             except:
                 time.sleep(0.1)
-            else:
-                print("Server does not seem to have been started!")
-                pytest.fail('Could not start server thread.')
+        else:
+            print("Server does not seem to have been started!")
+            pytest.fail('Could not start server thread.')
 
         def fin():
             response = requests.get("http://localhost:5000/shutdown")
