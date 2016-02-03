@@ -45,7 +45,7 @@ class Application(object):
                 break
             except:
                 time.sleep(0.1)
-        else:
+        else:  # pragma: no cover
             print("Server does not seem to have been started!")
             pytest.fail('Could not start server thread.')
 
