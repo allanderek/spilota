@@ -24,6 +24,8 @@ import time
 
 import pytest
 import flask
+from abc import ABCMeta, abstractproperty
+
 
 class Application(object):
     @staticmethod
@@ -36,6 +38,7 @@ class Application(object):
         func()
         return 'Server shutting down...'
 
+    application = None # Poor man's abstract base class property
 
     @pytest.fixture(autouse=True)
     def server_thread(self, request):
@@ -49,16 +52,16 @@ class Application(object):
         num_tries = 50 # So I'll wait for around 5 seconds.
         for _ in range(num_tries):
             try:
-                response = requests.get("http://localhost:5000/")
+                requests.get("http://localhost:5000/")
                 break
             except:  # pragma: no cover
-                time.sleep(0.1)
+                time.sleep(pause)
         else:  # pragma: no cover
             print("Server does not seem to have been started!")
             pytest.fail('Could not start server thread.')
 
         def fin():
-            response = requests.get("http://localhost:5000/shutdown")
+            requests.get("http://localhost:5000/shutdown")
             server_thread.join(timeout=3)
         request.addfinalizer(fin)
         return server_thread
@@ -71,6 +74,7 @@ def driver():
 class TestHelloWorld(Application):
     application = flask.Flask('TestHelloWorld')
 
+    @staticmethod
     @application.route("/")
     def hello():
         return "<h1>Hello World!</h1>"
@@ -83,11 +87,13 @@ class TestHelloWorld(Application):
 class TestClick(Application):
     application = flask.Flask('TestClick')
 
+    @staticmethod
     @application.route("/")
     def hello():
         return """<h1>Hello World!</h1>
                   <a href="http://localhost:5000/goodbye">say goodbye</a>"""
 
+    @staticmethod
     @application.route("/goodbye")
     def goodbye():
         return "<h2>Goodbye World!</h2>"
