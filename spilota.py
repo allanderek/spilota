@@ -24,7 +24,6 @@ import time
 
 import pytest
 import flask
-from abc import ABCMeta, abstractproperty
 
 
 class Application(object):
