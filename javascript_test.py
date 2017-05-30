@@ -1,7 +1,48 @@
 import html5lib
+import xmljson
+
+def xml_to_json(element):
+    return {'tag': element.tag,
+            'attributes': element.attrib,
+            'children': [xml_to_json(e) for e in element]}
+
+def parse_html_to_json(test_html):
+    xml_document = html5lib.parse(test_html, namespaceHTMLElements=False)
+    dom_document = xml_to_json(xml_document)
+    return dom_document
+
+
 import dukpy
 
-def test_javascript():
+class DukPyInterpreter(object):
+    def __init__(self):
+        self.interpreter = dukpy.JSInterpreter()
+        
+        # Multiple loggers possible with: new Duktape.Logger('logger name')
+        logger_init = "var logger = new Duktape.Logger();"
+        self.interpret(logger_init)
+    
+    def interpret(self, javascript, **kwargs):
+        return self.interpreter.evaljs(javascript, **kwargs)
+
+    def load_document(self, document):
+        javascript = "var document = dukpy['document'];"
+        self.interpret(javascript, document=document)
+
+
+class PyMiniRacerInterpreter(object):
+    pass
+
+import pytest
+# Might want to have 'scope="session"' or 'scope="module"'
+@pytest.fixture(params=[DukPyInterpreter, PyMiniRacerInterpreter],
+                ids=['dukpy', 'mini-racer'])
+def interpreter(request):
+    javascript_interpreter = request.param()
+    return javascript_interpreter
+
+
+def test_javascript(interpreter):
     test_html = """
     <!DOCTYPE>
     <html><head><title>Hello</title></head>
@@ -22,20 +63,13 @@ def test_javascript():
     # Assert that the original element is in the dom, and probably that the
     # new element that we expect to be there after the javascript has run is not.
     javascript = "\n".join(script_tag.text for script_tag in document.findall('script'))
-    dukpy.evaljs(javascript)
+    interpreter.interpret(javascript)
     # assert that the new element is indeed in the dom
 
 
-import xmljson
-import json
-
-def xml_to_json(element):
-    return {'tag': element.tag,
-            'attributes': element.attrib,
-            'children': [xml_to_json(e) for e in element]}
 
 
-def test_dom():
+def test_dom(interpreter):
     test_html = """
     <!DOCTYPE>
     <html>
@@ -47,13 +81,9 @@ def test_dom():
        </body>
     </html>
     """
-    xml_document = html5lib.parse(test_html, namespaceHTMLElements=False)
-    dom_document = xml_to_json(xml_document)
-    print(json.dumps(dom_document))
+    dom_document = parse_html_to_json(test_html)
 
     dom_javascript = """
-        var logger = new Duktape.Logger();  // or new Duktape.Logger('logger name')
-        var document = dukpy['document'];
         document.createElement = function(tag_name){
             function appendChild(element){
                 this.children.append(element);
@@ -83,9 +113,9 @@ def test_dom():
         div.children.push(paragraph);
         var collected_paragraph = document.getElementById(paragraph_id);
     """
-    interpreter = dukpy.JSInterpreter()
-    interpreter.evaljs(dom_javascript, document=dom_document)
+    interpreter.load_document(dom_document)
+    interpreter.interpret(dom_javascript)
     
     expected_paragraph = {'tag': 'p', 'children': [], 'attributes': {'id': 'paragraph-id'}}
-    collected_paragraph = interpreter.evaljs('collected_paragraph')
+    collected_paragraph = interpreter.interpret('collected_paragraph')
     assert collected_paragraph == expected_paragraph
