@@ -23,15 +23,33 @@ class DukPyInterpreter(object):
         self.interpret(logger_init)
     
     def interpret(self, javascript, **kwargs):
+        # TODO: This is not really correct, because the kwargs will only be
+        # assessible as 'dukpy['key']', rather than just by reference ot 'key',
+        # so you really need to do a kind of:
+        # var key = dukpy['key'];
+        # For each of them.
         return self.interpreter.evaljs(javascript, **kwargs)
 
     def load_document(self, document):
         javascript = "var document = dukpy['document'];"
         self.interpret(javascript, document=document)
 
+from py_mini_racer import py_mini_racer
+import json
 
 class PyMiniRacerInterpreter(object):
-    pass
+    def __init__(self):
+        self.interpreter = py_mini_racer.MiniRacer()
+    
+    def interpret(self, javascript, **kwargs):
+        # This ignores the kwargs, we should do something like:
+        # "var key = {};".format(json.dumps(value)
+        # And interpret that first
+        return self.interpreter.eval(javascript)
+
+    def load_document(self, document):
+        javascript = "var document = {};".format(json.dumps(document))
+        self.interpret(javascript)
 
 import pytest
 # Might want to have 'scope="session"' or 'scope="module"'
